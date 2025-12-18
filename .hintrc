@@ -10,6 +10,7 @@
           "min-width: fit-content"
         ]
       }
-    ]
+    ],
+    "typescript-config/is-valid": "off"
   }
 }
