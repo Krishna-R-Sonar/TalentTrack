@@ -1,185 +1,115 @@
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { logout, clearAllUserErrors } from "../store/slices/userSlice";
-import { LuMoveRight } from "react-icons/lu";
-import MyProfile from "../components/MyProfile";
-import UpdateProfile from "../components/UpdateProfile";
-import UpdatePassword from "../components/UpdatePassword";
-import MyJobs from "../components/MyJobs";
-import JobPost from "../components/JobPost";
-import Applications from "../components/Applications";
-import MyApplications from "../components/MyApplications";
+// frontend/src/pages/Dashboard.jsx
+import React, { useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { Link, Routes, Route, useLocation } from 'react-router-dom';
+import Account from '../components/Account';
+import Applications from '../components/Applications';
+import MyJobs from '../components/MyJobs';
+import MyApplications from '../components/MyApplications';
+import CareerAdvice from '../components/CareerAdvice';
+import ResumeBasedJobSearch from '../components/ResumeBasedJobSearch';
+import Endorsements from '../components/Endorsements';
+import ImpactPoints from '../components/ImpactPoints';
+import AutoApply from './AutoApply';
+import EditJob from '../components/EditJob';  // New import
+import { toast } from 'react-toastify';
+import { updateProfile } from '../store/slices/updateProfileSlice';
+import { getUser } from '../store/slices/userSlice';
 
 const Dashboard = () => {
-  const [show, setShow] = useState(false);
-  const [componentName, setComponentName] = useState("My Profile");
+    const { user } = useSelector((state) => state.user);
+    const [newsletterOptIn, setNewsletterOptIn] = useState(user?.newsletterOptIn ?? true);
+    const dispatch = useDispatch();
+    const location = useLocation();
 
-  const { loading, isAuthenticated, error, user } = useSelector(
-    (state) => state.user
-  );
+    const handleNewsletterToggle = async () => {
+        const newPreference = !newsletterOptIn;
+        setNewsletterOptIn(newPreference);
+        const formData = new FormData();
+        // Send all existing data to prevent it from being wiped
+        formData.append("name", user.name);
+        formData.append("email", user.email);
+        formData.append("phone", user.phone);
+        formData.append("address", user.address);
+        if (user.role === 'Job Seeker') {
+            formData.append("firstNiche", user.niches.firstNiche);
+            formData.append("secondNiche", user.niches.secondNiche);
+            formData.append("thirdNiche", user.niches.thirdNiche);
+        }
+        formData.append("newsletterOptIn", newPreference);
 
-  const dispatch = useDispatch();
-  const navigateTo = useNavigate();
+        try {
+            await dispatch(updateProfile(formData)).unwrap();
+            dispatch(getUser()); // Refresh user data
+            toast.success('Newsletter preference updated.');
+        } catch (error) {
+            setNewsletterOptIn(!newPreference); // Revert on failure
+            toast.error(error?.message || 'Failed to update newsletter preference');
+        }
+    };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    toast.success("Logged out successfully.");
-  };
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearAllUserErrors());
+    if (!user) {
+        return <div>Loading...</div>;
     }
-    if (!isAuthenticated) {
-      navigateTo("/");
-    }
-  }, [dispatch, error, loading, isAuthenticated]);
 
-  return (
-    <>
-      <section className="account">
-        <div className="component_header">
-          <p>Dashboard</p>
-          <p>
-            Welcome! <span>{user && user.name}</span>
-          </p>
-        </div>
-        <div className="container">
-          <div className={show ? "sidebar showSidebar" : "sidebar"}>
-            <ul className="sidebar_links">
-              <h4>Manage Account</h4>
-              <li>
-                <button
-                  onClick={() => {
-                    setComponentName("My Profile");
-                    setShow(!show);
-                  }}
-                >
-                  My Profile
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setComponentName("Update Profile");
-                    setShow(!show);
-                  }}
-                >
-                  Update Profile
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setComponentName("Update Password");
-                    setShow(!show);
-                  }}
-                >
-                  Update Password
-                </button>
-              </li>
+    const getLinkClass = (path) => {
+        return location.pathname === path
+            ? 'block p-3 bg-primary text-white rounded-md'
+            : 'block p-3 text-gray-600 hover:bg-neutral hover:text-primary rounded-md';
+    };
 
-              {user && user.role === "Employer" && (
-                <li>
-                  <button
-                    onClick={() => {
-                      setComponentName("Job Post");
-                      setShow(!show);
-                    }}
-                  >
-                    Post New Job
-                  </button>
-                </li>
-              )}
-              {user && user.role === "Employer" && (
-                <li>
-                  <button
-                    onClick={() => {
-                      setComponentName("My Jobs");
-                      setShow(!show);
-                    }}
-                  >
-                    My Jobs
-                  </button>
-                </li>
-              )}
-              {user && user.role === "Employer" && (
-                <li>
-                  <button
-                    onClick={() => {
-                      setComponentName("Applications");
-                      setShow(!show);
-                    }}
-                  >
-                    Applications
-                  </button>
-                </li>
-              )}
-              {user && user.role === "Job Seeker" && (
-                <li>
-                  <button
-                    onClick={() => {
-                      setComponentName("My Applications");
-                      setShow(!show);
-                    }}
-                  >
-                    My Applications
-                  </button>
-                </li>
-              )}
-              <li>
-                <button onClick={handleLogout}>Logout</button>
-              </li>
-            </ul>
-          </div>
-          <div className="banner">
-            <div
-              className={
-                show ? "sidebar_icon move_right" : "sidebar_icon move_left"
-              }
-            >
-              <LuMoveRight
-                onClick={() => setShow(!show)}
-                className={show ? "left_arrow" : "right_arrow"}
-              />
+    return (
+        <div className="p-4 sm:p-6 min-h-screen bg-gray-100">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-6">
+                <aside className="md:w-1/4 bg-white p-4 rounded-lg shadow-md self-start">
+                    <h4 className="text-xl font-semibold text-dark mb-6">Dashboard</h4>
+                    <nav className="flex flex-col gap-2">
+                        <Link to="/dashboard/account" className={getLinkClass('/dashboard/account')}>Account</Link>
+                        <Link to="/dashboard/my-jobs" className={getLinkClass('/dashboard/my-jobs')}>Posted Jobs</Link>
+                        {user.role === 'Employer' ? (
+                            <>
+                                <Link to="/dashboard/applications" className={getLinkClass('/dashboard/applications')}>Applications</Link>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/dashboard/my-applications" className={getLinkClass('/dashboard/my-applications')}>My Applications</Link>
+                                <Link to="/dashboard/career-advice" className={getLinkClass('/dashboard/career-advice')}>AI Career Assistant</Link>
+                                <Link to="/dashboard/resume-jobs" className={getLinkClass('/dashboard/resume-jobs')}>Resume-Based Jobs</Link>
+                                <Link to="/dashboard/endorsements" className={getLinkClass('/dashboard/endorsements')}>Endorsements</Link>
+                                <Link to="/dashboard/impact-points" className={getLinkClass('/dashboard/impact-points')}>Impact Points</Link>
+                                <Link to="/dashboard/auto-apply" className={getLinkClass('/dashboard/auto-apply')}>Auto-Apply</Link>
+                            </>
+                        )}
+                    </nav>
+                    <div className="mt-6 pt-4 border-t">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={newsletterOptIn}
+                                onChange={handleNewsletterToggle}
+                                className="h-5 w-5 text-primary rounded focus:ring-primary"
+                            />
+                            <span className="text-gray-600">Receive Job Newsletters</span>
+                        </label>
+                    </div>
+                </aside>
+                <div className="md:w-3/4 bg-white p-6 rounded-lg shadow-md">
+                    <Routes>
+                        <Route path="account" element={<Account />} />
+                        <Route path="applications" element={<Applications />} />
+                        <Route path="my-jobs" element={<MyJobs />} />
+                        <Route path="my-applications" element={<MyApplications />} />
+                        <Route path="career-advice" element={<CareerAdvice />} />
+                        <Route path="resume-jobs" element={<ResumeBasedJobSearch />} />
+                        <Route path="endorsements" element={<Endorsements />} />
+                        <Route path="impact-points" element={<ImpactPoints />} />
+                        <Route path="auto-apply" element={<AutoApply />} />
+                        <Route path="edit-job/:jobId" element={<EditJob />} />  {/* New route */}
+                    </Routes>
+                </div>
             </div>
-            {(() => {
-              switch (componentName) {
-                case "My Profile":
-                  return <MyProfile />;
-                  break;
-                case "Update Profile":
-                  return <UpdateProfile />;
-                  break;
-                case "Update Password":
-                  return <UpdatePassword />;
-                  break;
-                case "Job Post":
-                  return <JobPost />;
-                  break;
-                case "My Jobs":
-                  return <MyJobs />;
-                  break;
-                case "Applications":
-                  return <Applications />;
-                  break;
-                case "My Applications":
-                  return <MyApplications />;
-                  break;
-
-                default:
-                  <MyProfile />;
-                  break;
-              }
-            })()}
-          </div>
         </div>
-      </section>
-    </>
-  );
+    );
 };
 
 export default Dashboard;

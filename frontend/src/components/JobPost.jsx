@@ -1,9 +1,10 @@
+// frontend/src/components/JobPost.jsx
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
-  clearAllJobErrors,
+  clearErrors,
   postJob,
   resetJobSlice,
 } from "../store/slices/jobSlice";
@@ -99,7 +100,7 @@ const JobPost = () => {
   useEffect(() => {
     if (error) {
       toast.error(error);
-      dispatch(clearAllJobErrors());
+      dispatch(clearErrors());
     }
     if (message) {
       toast.success(message);

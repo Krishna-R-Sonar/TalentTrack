@@ -1,3 +1,4 @@
+// frontend/src/components/UpdatePassword.jsx
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -114,4 +115,4 @@ const UpdatePassword = () => {
   );
 };
 
-export default UpdatePassword;
+export default UpdatePassword

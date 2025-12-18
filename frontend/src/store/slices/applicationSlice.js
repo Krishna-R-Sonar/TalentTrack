@@ -1,147 +1,146 @@
-import { createSlice } from "@reduxjs/toolkit";
+// frontend/src/store/slices/applicationSlice.js
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
+export const postApplication = createAsyncThunk(
+  'application/post',
+  async ({ jobId, formData }, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(`/application/post/${jobId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+
+export const fetchEmployerApplications = createAsyncThunk(
+  'application/employerGetAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/application/employer/getall');
+      return response.data.applications;
+    } catch (error) {
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+
+export const fetchJobSeekerApplications = createAsyncThunk(
+  'application/jobSeekerGetAll',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/application/jobseeker/getall');
+      return response.data.applications;
+    } catch (error) {
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+
+export const deleteApplication = createAsyncThunk(
+  'application/delete',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`/application/delete/${id}`);
+      return { id, message: response.data.message };
+    } catch (error) {
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+
+// New thunk for manual auto-apply
+export const autoApplyJobs = createAsyncThunk(
+  'application/autoApply',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('/application/auto-apply');
+      return response.data.appliedJobs;
+    } catch (error) {
+      return rejectWithValue(error.response.data.message);
+    }
+  }
+);
+
 const applicationSlice = createSlice({
-    name: 'application',
-    initialState: {
-        applications: [],
-        loading: false,
-        error: null,
-        message: null,
+  name: 'application',
+  initialState: {
+    applications: [],
+    autoAppliedJobs: [],  // New state
+    loading: false,
+    error: null,
+    message: null,
+    aiFeedback: null,
+    compatibilityScore: null,
+  },
+  reducers: {
+    clearApplicationErrors(state) {
+      state.error = null;
     },
-    reducers: {
-        requestForAllApplications(state, action){
-            state.loading = true;
-            state.error = null;
-        },
-        successForAllApplications(state, action){
-            state.loading = false;
-            state.error = null;
-            state.applications = action.payload;
-        },
-        failureForAllApplications(state, action){
-            state.loading = false;
-            state.error = action.payload;
-        },
-        requestForMyApplications(state, action){
-            state.loading = true;
-            state.error = null;
-        },
-        successForMyApplications(state, action){
-            state.loading = false;
-            state.error = null;
-            state.applications = action.payload;
-        },
-        failureForMyApplications(state, action){
-            state.loading = false;
-            state.error = action.payload;
-        },
-        requestForPostApplication(state, action){
-            state.loading = true;
-            state.error = null;
-            state.message = null;
-        },
-        successForPostApplication(state, action){
-            state.loading = false;
-            state.error = null;
-            state.message = action.payload;},
-        failureForPostApplication(state, action){
-            state.loading = false;
-            state.error = action.payload;
-            state.message = null;
-        },
-        requestForDeleteApplication(state, action){
-            state.loading = true;
-            state.error = null;
-            state.message = null;
-        },
-        successForDeleteApplication(state, action){
-            state.loading = false;
-            state.error = null;
-            state.message = action.payload;
-        },
-        failedForDeleteApplication(state, action){
-            state.loading = false;
-            state.error = action.payload;
-            state.message = null;
-        },
-        clearAllErrors(state, action){
-            state.error = null;
-            state.applications = state.applications;
-        },
-        resetApplicationSlice(state, action){
-            state.error = null;
-            state.applications = state.applications;
-            state.message = null;
-            state.loading = false;
-        },
+    clearApplicationMessage(state) {
+      state.message = null;
+      state.aiFeedback = null;
+      state.compatibilityScore = null;
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(postApplication.pending, (state) => { state.loading = true; })
+      .addCase(postApplication.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = action.payload.message;
+        state.aiFeedback = action.payload.aiFeedback;
+        state.compatibilityScore = action.payload.compatibilityScore;
+        state.error = null;
+      })
+      .addCase(postApplication.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchEmployerApplications.pending, (state) => { state.loading = true; })
+      .addCase(fetchEmployerApplications.fulfilled, (state, action) => {
+        state.loading = false;
+        state.applications = action.payload;
+      })
+      .addCase(fetchEmployerApplications.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchJobSeekerApplications.pending, (state) => { state.loading = true; })
+      .addCase(fetchJobSeekerApplications.fulfilled, (state, action) => {
+        state.loading = false;
+        state.applications = action.payload;
+      })
+      .addCase(fetchJobSeekerApplications.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(deleteApplication.pending, (state) => {})
+      .addCase(deleteApplication.fulfilled, (state, action) => {
+        state.loading = false;
+        state.message = action.payload.message;
+        state.applications = state.applications.filter((app) => app._id !== action.payload.id);
+      })
+      .addCase(deleteApplication.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // New extra reducers for auto-apply
+      .addCase(autoApplyJobs.pending, (state) => { state.loading = true; })
+      .addCase(autoApplyJobs.fulfilled, (state, action) => {
+        state.loading = false;
+        state.autoAppliedJobs = action.payload;
+        state.message = 'Auto-apply completed successfully';
+      })
+      .addCase(autoApplyJobs.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
+  },
 });
 
-
-export const deleteApplication = (id) =>async (dispatch) => {
-    dispatch(applicationSlice.actions.requestForDeleteApplication());
-    try {
-        const response = await axios.delete(`http://localhost:4000/api/v1/application/delete/${id}`, {
-            withCredentials: true
-        });
-        dispatch(applicationSlice.actions.successForDeleteApplication(response.data.message));
-        dispatch(clearAllApplicationErrors());
-    } catch (error) {
-        dispatch(applicationSlice.actions.failedForDeleteApplication(error.response.data.message));
-    }
-}
-
-export const fetchEmployerApplications = () => async (dispatch) => {
-    dispatch(applicationSlice.actions.requestForAllApplications()); // Dispatch the action to indicate loading has started
-    try {
-        const response = await axios.get('http://localhost:4000/api/v1/application/employer/getall', {
-            withCredentials: true, // Include cookies for authentication
-        });
-        dispatch(applicationSlice.actions.successForAllApplications(response.data.applications)); // Dispatch success with the fetched applications
-        dispatch(applicationSlice.actions.clearAllErrors()); // Clear any previous errors
-    } catch (error) {
-        dispatch(applicationSlice.actions.failureForAllApplications(error.response.data.message)); // Dispatch failure with the error message
-    }
-};
-
-
-export const fetchJobSeekerApplications = () => async (dispatch) => {
-    dispatch(applicationSlice.actions.requestForMyApplications()); // Dispatch the action to set loading to true
-    try {
-        const response = await axios.get('http://localhost:4000/api/v1/application/jobseeker/getall', {
-            withCredentials: true, // To ensure the request carries credentials such as cookies
-        });
-        dispatch(applicationSlice.actions.successForMyApplications(response.data.applications)); // Dispatch success action and pass the fetched applications
-        dispatch(applicationSlice.actions.clearAllErrors()); // Clear errors if any
-    } catch (error) {
-        dispatch(applicationSlice.actions.failureForMyApplications(error.response.data.message)); // Dispatch failure action in case of an error
-    }
-};
-
-
-export const postApplication = (data, jobId) =>async (dispatch) => {
-    dispatch(applicationSlice.actions.requestForPostApplication());
-    try {
-        const response = await axios.post(`http://localhost:4000/api/v1/application/post/${jobId}`, data, {
-            withCredentials: true,
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-        });
-        dispatch(applicationSlice.actions.successForPostApplication(response.data.message));
-        dispatch(applicationSlice.actions.clearAllErrors());
-    } catch (error) {
-        dispatch(applicationSlice.actions.failureForPostApplication(error.response.data.message));
-    }
-};
-
-export const clearAllApplicationErrors = () => (dispatch) => {
-    dispatch(applicationSlice.actions.clearAllErrors())
-}
-
-export const resetApplicationSlice = () => (dispatch) => {
-    dispatch(applicationSlice.actions.resetApplicationSlice());
-}
-
+export const { clearApplicationErrors, clearApplicationMessage } = applicationSlice.actions;
 export default applicationSlice.reducer;

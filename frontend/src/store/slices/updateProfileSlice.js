@@ -1,5 +1,34 @@
-import {createSlice} from "@reduxjs/toolkit";
+// frontend/src/store/slices/updateProfileSlice.js
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+
+export const updateProfile = createAsyncThunk(
+    "profile/update",
+    async (formData, { rejectWithValue }) => {
+        try {
+            const { data } = await axios.put("/user/update/profile", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            return data.message;
+        } catch (error) {
+            return rejectWithValue(error.response.data.message);
+        }
+    }
+);
+
+export const updatePassword = createAsyncThunk(
+    "profile/updatePassword",
+    async (passwords, { rejectWithValue }) => {
+        try {
+            const { data } = await axios.put("/user/update/password", passwords, {
+                headers: { "Content-Type": "application/json" },
+            });
+            return data.message;
+        } catch (error) {
+            return rejectWithValue(error.response.data.message);
+        }
+    }
+);
 
 const updateProfileSlice = createSlice({
     name: 'updateProfile',
@@ -7,70 +36,45 @@ const updateProfileSlice = createSlice({
         loading: false,
         error: null,
         isUpdated: false,
+        message: null
     },
     reducers: {
-        updateProfileRequest(state, action){
-            state.loading = true;
-        },
-        updateProfileSuccess(state, action){
-            state.error = null;
-            state.loading = false;
-            state.isUpdated = true;
-        },
-        updateProfilefailed(state, action){
-            state.error = action.payload;
-            state.loading = false;
-            state.isUpdated = false;
-        },
-        updatePasswordRequest(state, action){
-            state.loading = true;
-        },
-        updatePasswordSucess(state, action){
-            state.error = null;
-            state.loading = false;
-            state.isUpdated = true;
-        },
-        updatePasswordFailed(state, action){
-            state.error = action.payload;
-            state.loading = false;
-            state.isUpdated = false;
-        },
-        profileResetAfterUpdate(state, action){
+        clearUpdateProfileState(state) {
             state.error = null;
             state.isUpdated = false;
-            state.loading = false;
-        },
+            state.message = null;
+        }
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(updateProfile.pending, (state) => {
+                state.loading = true;
+                state.isUpdated = false;
+            })
+            .addCase(updateProfile.fulfilled, (state, action) => {
+                state.loading = false;
+                state.isUpdated = true;
+                state.message = action.payload;
+            })
+            .addCase(updateProfile.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(updatePassword.pending, (state) => {
+                state.loading = true;
+                state.isUpdated = false;
+            })
+            .addCase(updatePassword.fulfilled, (state, action) => {
+                state.loading = false;
+                state.isUpdated = true;
+                state.message = action.payload;
+            })
+            .addCase(updatePassword.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            });
     }
 });
 
-export const updateProfile = (data) =>async (dispatch)=> {
-    dispatch(updateProfileSlice.actions.updateProfileRequest());
-    try {
-        const response = await axios.put("http://localhost:4000/api/v1/user/update/profile", data, {
-            withCredentials: true,
-            headers: {"Content-Type": "multipart/form-data"},
-        });
-        dispatch(updateProfileSlice.actions.updateProfileSuccess());
-    } catch (error) {
-        dispatch(updateProfileSlice.actions.updateProfileFailed(error.response.data.message || "Failed to update profile"));
-    }
-};
-
-export const updatePassword = (data) => async(dispatch) => {
-    dispatch(updateProfileSlice.actions.updatePasswordRequest());
-    try {
-        const response = await axios.put("http://localhost:4000/api/v1/user/update/password", data, {
-            withCredentials: true,
-            headers: {"Content-Type": "application/json"},
-        });
-        dispatch(updateProfileSlice.actions.updatePasswordSucess());
-    } catch (error) {
-        dispatch(updateProfileSlice.actions.updatePasswordFailed(error.response.data.message || "Failed to update password"))
-    }
-}
-
-export const clearAllUpdateProfileErrors = () => (dispatch) => {
-    dispatch(updateProfileSlice.actions.profileResetAfterUpdate());
-}
-
+export const { clearUpdateProfileState } = updateProfileSlice.actions;
 export default updateProfileSlice.reducer;

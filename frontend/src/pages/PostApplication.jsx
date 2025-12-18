@@ -1,252 +1,120 @@
+// frontend/src/pages/PostApplication.jsx
 import React, { useEffect, useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  clearAllApplicationErrors,
-  postApplication,
-  resetApplicationSlice,
-} from "../store/slices/applicationSlice";
+import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import { fetchSingleJob } from "../store/slices/jobSlice";
-import { IoMdCash } from "react-icons/io";
-import { FaToolbox } from "react-icons/fa";
-import { FaLocationDot } from "react-icons/fa6";
+import { postApplication, clearApplicationMessage, clearApplicationErrors } from "../store/slices/applicationSlice";
+import { fetchSingleJob, clearJobErrors } from "../store/slices/jobSlice.js";
+import Spinner from "../components/Spinner";
 
 const PostApplication = () => {
-  const {singleJob} = useSelector((state) => state.jobs);
-  const {isAuthenticated, user} = useSelector((state) => state.user);
-  const {loading, error, message} = useSelector(state => state.applications);
+    const { jobId } = useParams();
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
 
-  const {jobId} = useParams();
+    const { singleJob, loading: jobLoading, error: jobError } = useSelector((state) => state.jobs);
+    const { loading: appLoading, error: appError, message: appMessage, aiFeedback, compatibilityScore } = useSelector((state) => state.applications);
+    const { user } = useSelector((state) => state.user);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [coverLetter, setCoverLetter] = useState("");
-  const [resume, setResume] = useState("");
+    const [coverLetter, setCoverLetter] = useState('');
+    const [resumeFile, setResumeFile] = useState(null);
 
-  const navigateTo = useNavigate();
-  const dispatch = useDispatch();
+    useEffect(() => {
+        dispatch(fetchSingleJob(jobId));
+    }, [dispatch, jobId]);
 
-  const handlePostApplication = (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("email", email);
-    formData.append("phone", phone);
-    formData.append("address", address);
-    formData.append("coverLetter", coverLetter);
-    if(resume){
-      formData.append("resume", resume);
+    useEffect(() => {
+        if (jobError) {
+            toast.error(jobError);
+            dispatch(clearJobErrors());
+            navigate('/jobs');
+        }
+        if (appError) {
+            toast.error(appError);
+            dispatch(clearApplicationErrors());
+        }
+        if (appMessage) {
+            toast.success(appMessage);
+            if (aiFeedback) {
+                toast.info(`AI Feedback: ${aiFeedback} (Score: ${compatibilityScore})`);
+            }
+            dispatch(clearApplicationMessage());
+            navigate("/dashboard/my-applications");
+        }
+    }, [dispatch, navigate, jobError, appError, appMessage, aiFeedback, compatibilityScore]);
+
+    const handleFileChange = (e) => {
+        setResumeFile(e.target.files[0]);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append("name", user.name);
+        formData.append("email", user.email);
+        formData.append("phone", user.phone);
+        formData.append("address", user.address);
+        formData.append("coverLetter", coverLetter);
+
+        if (resumeFile) {
+            formData.append("resume", resumeFile);
+        }
+        dispatch(postApplication({ jobId, formData }));
+    };
+
+    if (jobLoading || !singleJob) {
+        return <Spinner />;
     }
-    dispatch(postApplication(formData, jobId));
-  };
 
-  useEffect(() => {
-    if(user){
-      setName(user.name || "");
-      setEmail(user.email || "");
-      setPhone(user.phone || "");
-      setAddress(user.address || "");
-      setCoverLetter(user.coverLetter || "");
-      setResume((user.resume && user.resume.url) || "");
-    }
-    if(error){
-      toast.error(error);
-      dispatch(clearAllApplicationErrors());
-    }
-    if(message) {
-      toast.success(message);
-      dispatch(resetApplicationSlice());
-    }
-    dispatch(fetchSingleJob(jobId));
-  }, [dispatch, error, message, jobId, user]);
-
-  let qualifications = [];
-  let responsibilities = [];
-  let offering = [];
-  if(singleJob.qualifications){
-    qualifications = singleJob.qualifications.split(". ");
-  }
-  if(singleJob.responsibilities){
-    responsibilities = singleJob.responsibilities.split(". ");
-  }
-  if(singleJob.offers){
-    offering = singleJob.offers.split(". ");
-  }
-
-  const resumeHandler = (e) => {
-    const file = e.target.files[0];
-    setResume(file);
-  };
-
-  return (
-    <>
-      <article className="application_page">
-        <form>
-          <h3>Application Form</h3>
-          <div>
-            <label>Job Title</label>
-            <input type="text" placeholder={singleJob.title} disabled />
-          </div>
-          <div>
-            <label>Your Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Your Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Phone Number</label>
-            <input
-              type="number"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-          <div>
-            <label>Address</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-            />
-          </div>
-          {user && user.role === "Job Seeker" && (
-            <>
-              <div>
-                <label>Coverletter</label>
-                <textarea
-                  value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
-                  rows={10}
-                />
-              </div>
-              <div>
-                <label>Resume</label>
-                <input type="file" onChange={resumeHandler} />
-              </div>
-            </>
-          )}
-
-          {isAuthenticated && user.role === "Job Seeker" && (
-            <div style={{ alignItems: "flex-end" }}>
-              <button
-                className="btn"
-                onClick={handlePostApplication}
-                disabled={loading}
-              >
-                Apply
-              </button>
+    return (
+        <div className="min-h-screen bg-gray-100 p-4 flex justify-center items-center">
+            <div className="max-w-3xl w-full p-6 bg-white rounded-lg shadow-md">
+                <h2 className="text-2xl sm:text-3xl font-semibold text-primary mb-2">
+                    Apply for {singleJob.title}
+                </h2>
+                <p className="text-lg text-dark mb-6">at {singleJob.companyName}</p>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-gray-700 mb-2 font-medium">Your Cover Letter</label>
+                        <textarea
+                            name="coverLetter"
+                            value={coverLetter}
+                            onChange={(e) => setCoverLetter(e.target.value)}
+                            className="w-full p-3 rounded-md bg-neutral border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary"
+                            rows="6"
+                            placeholder="Write a compelling cover letter explaining why you are a good fit for this role."
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-700 mb-2 font-medium">Your Resume (Image only)</label>
+                        <p className="text-sm text-gray-500 mb-2">
+                            Your saved resume will be used by default. Upload a new one below to override it for this application only.
+                        </p>
+                        <input
+                            type="file"
+                            name="resume"
+                            accept="image/png, image/jpeg, image/jpg"
+                            onChange={handleFileChange}
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-primary hover:file:bg-blue-100"
+                        />
+                        {user?.resume?.url && !resumeFile && (
+                            <p className="text-gray-600 text-sm mt-2">
+                                Currently using: <a href={user.resume.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Saved Resume</a>
+                            </p>
+                        )}
+                    </div>
+                    <button
+                        type="submit"
+                        className="w-full py-3 bg-primary text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        disabled={appLoading}
+                    >
+                        {appLoading ? "Submitting..." : "Submit Application"}
+                    </button>
+                </form>
             </div>
-          )}
-        </form>
-
-        <div className="job-details">
-          <header>
-            <h3>{singleJob.title}</h3>
-            {singleJob.personalWebsite && (
-              <Link target="_blank" to={singleJob.personalWebsite.url}>
-                {singleJob.personalWebsite.title}
-              </Link>
-            )}
-            <p>{singleJob.location}</p>
-            <p>Rs. {singleJob.salary} a month</p>
-          </header>
-          <hr />
-          <section>
-            <div className="wrapper">
-              <h3>Job details</h3>
-              <div>
-                <IoMdCash />
-                <div>
-                  <span>Pay</span>
-                  <span>{singleJob.salary} a month</span>
-                </div>
-              </div>
-              <div>
-                <FaToolbox />
-                <div>
-                  <span>Job type</span>
-                  <span>{singleJob.jobType}</span>
-                </div>
-              </div>
-            </div>
-            <hr />
-            <div className="wrapper">
-              <h3>Location</h3>
-              <div className="location-wrapper">
-                <FaLocationDot />
-                <span>{singleJob.location}</span>
-              </div>
-            </div>
-            <hr />
-            <div className="wrapper">
-              <h3>Full Job Description</h3>
-              <p>{singleJob.introduction}</p>
-              {singleJob.qualifications && (
-                <div>
-                  <h4>Qualifications</h4>
-                  <ul>
-                    {qualifications.map((element) => {
-                      return (
-                        <li key={element} style={{ listStyle: "inside" }}>
-                          {element}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-              {singleJob.responsibilities && (
-                <div>
-                  <h4>Responsibilities</h4>
-                  <ul>
-                    {responsibilities.map((element) => {
-                      return (
-                        <li key={element} style={{ listStyle: "inside" }}>
-                          {element}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-              {singleJob.offers && (
-                <div>
-                  <h4>Offering</h4>
-                  <ul>
-                    {offering.map((element) => {
-                      return (
-                        <li key={element} style={{ listStyle: "inside" }}>
-                          {element}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </section>
-          <hr />
-          <footer>
-            <h3>Job Niche</h3>
-            <p>{singleJob.jobNiche}</p>
-          </footer>
         </div>
-      </article>
-    </>
-  );
-}
+    );
+};
 
-export default PostApplication
+export default PostApplication;

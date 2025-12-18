@@ -1,88 +1,33 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
-import {
-  FaSquareXTwitter,
-  FaSquareInstagram,
-  FaYoutube,
-  FaLinkedin,
-} from "react-icons/fa6";
-
+// frontend/src/components/Footer.jsx
+import React from 'react';
+import talentTrackLogo from './talenttracklogo.png';
 const Footer = () => {
-  const { isAuthenticated } = useSelector((state) => state.user);
   return (
-    <>
-      <footer>
-        <div>
-          <img src="/talentracklogo.png" alt="logo" />
+    <footer className="bg-dark text-white p-6">
+      <div className="container mx-auto flex flex-wrap gap-6">
+        <div className="flex-1 min-w-[200px]">
+          <img src={talentTrackLogo} alt="Logo" className="w-32 mx-auto" />
         </div>
-        <div>
-          <h4>Support</h4>
-          <ul>
-            <li>Street No.12 Office No.911 Pune, Maharashtra</li>
-            <li>tracktalent@gmail.com</li>
-            <li>+91 9876543210</li>
+        <div className="flex-1 min-w-[200px]">
+          <h4 className="text-xl font-bold mb-4">Links</h4>
+          <ul className="flex flex-col gap-2">
+            <li><a href="#" className="text-gray-300 hover:text-accent transition">Home</a></li>
+            <li><a href="#" className="text-gray-300 hover:text-accent transition">Jobs</a></li>
+            <li><a href="#" className="text-gray-300 hover:text-accent transition">Dashboard</a></li>
           </ul>
         </div>
-
-        <div>
-          <h4>Quick Links</h4>
-          <ul>
-            <li to={"/"}>
-              <Link>Home</Link>
-            </li>
-            <li to={"/jobs"}>
-              <Link>Jobs</Link>
-            </li>
-            {isAuthenticated && (
-              <li>
-                <Link to={"/dashboard"}>Dashboard</Link>
-              </li>
-            )}
+        <div className="flex-1 min-w-[200px]">
+          <h4 className="text-xl font-bold mb-4">Contact</h4>
+          <ul className="flex flex-col gap-2">
+            <li><a href="#" className="text-gray-300 hover:text-accent transition">Email Us</a></li>
+            <li><a href="#" className="text-gray-300 hover:text-accent transition">Support</a></li>
           </ul>
         </div>
-        <div>
-          <h4>Follow Us</h4>
-          <ul>
-            <li>
-              <Link to={"/"}>
-                <span>
-                  <FaSquareXTwitter />
-                </span>
-                <span>Twitter (X)</span>
-              </Link>
-            </li>
-            <li>
-              <Link to={"/"}>
-                <span>
-                  <FaSquareInstagram />
-                </span>
-                <span>Instagram</span>
-              </Link>
-            </li>
-            <li>
-              <Link to={"/"}>
-                <span>
-                  <FaYoutube />
-                </span>
-                <span>Youtube</span>
-              </Link>
-            </li>
-            <li>
-              <Link to={"/"}>
-                <span>
-                  <FaLinkedin />
-                </span>
-                <span>LinkedIn</span>
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </footer>
-      <div className="copyright">
-        &copy; CopyRight 2024. All Rights Reserved By Talent-Track Pvt ltd.
       </div>
-    </>
+      <div className="bg-dark text-center text-gray-400 p-4">
+        &copy; 2025 TalentTrack. All rights reserved.
+      </div>
+    </footer>
   );
 };
 

@@ -1,148 +1,154 @@
-import { createSlice } from "@reduxjs/toolkit";
+// frontend/src/store/slices/userSlice.js
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+
+// Thunk for fetching AI career advice
+export const fetchCareerAdvice = createAsyncThunk(
+    "user/fetchCareerAdvice",
+    async (query, { rejectWithValue }) => {
+        try {
+            const response = await axios.post("/user/career-advice", { query });
+            return response.data.response;
+        } catch (error) {
+            return rejectWithValue(error.response.data.message);
+        }
+    }
+);
+
+
+// Other thunks (register, login, etc.) remain the same.
+export const register = createAsyncThunk("user/register", async (data, { rejectWithValue }) => {
+    try {
+        const response = await axios.post("/user/register", data, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+        return response.data;
+    } catch (error) {
+        return rejectWithValue(error.response?.data?.message || "Registration failed");
+    }
+});
+
+export const login = createAsyncThunk("user/login", async (data, { rejectWithValue }) => {
+    try {
+        const response = await axios.post("/user/login", data, {
+            headers: { "Content-Type": "application/json" },
+        });
+        return response.data;
+    } catch (error) {
+        return rejectWithValue(error.response?.data?.message || "Login failed");
+    }
+});
+
+export const getUser = createAsyncThunk("user/getUser", async (_, { rejectWithValue }) => {
+    try {
+        const response = await axios.get("/user/me");
+        return response.data.user;
+    } catch (error) {
+        // Don't reject for 401 errors (not authenticated) - this is expected when user is not logged in
+        if (error.response && error.response.status === 401) {
+            return rejectWithValue(null); // Return null to indicate not authenticated
+        }
+        return rejectWithValue(error.response?.data?.message || "Failed to get user");
+    }
+});
+
+export const logout = createAsyncThunk("user/logout", async (_, { rejectWithValue }) => {
+    try {
+        await axios.get("/user/logout");
+    } catch (error) {
+        return rejectWithValue(error.response.data.message);
+    }
+});
+
 
 const userSlice = createSlice({
     name: "user",
     initialState: {
         loading: false,
         isAuthenticated: false,
-        user: {},
+        user: null,
         error: null,
-        message: null,
+        // New state for career advice
+        adviceLoading: false,
+        adviceError: null,
+        careerAdvice: "",
     },
     reducers: {
-        registerRequest(state, action){
-            state.loading = true;
-            state.error = null;
-            state.message = null;
-            state.isAuthenticated = false;
-            state.user = {};
-        },
-        registerSuccess(state, action){
-            state.loading = false;
-            state.isAuthenticated = true;
-            state.user = action.payload.user;
-            state.error = null;
-            state.message = action.payload.message;
-        },
-        registerFailed(state, action){
-            state.loading = false;
-            state.isAuthenticated = false;
-            state.user = {};
-            state.error = action.payload;
-            state.message = null;
-        },
-        loginRequest(state, action){
-            state.loading = true;
-            state.error = null;
-            state.message = null;
-            state.isAuthenticated = false;
-            state.user = {};
-        },
-        loginSuccess(state, action){
-            state.loading = false;
-            state.isAuthenticated = true;
-            state.user = action.payload.user;
-            state.error = null;
-            state.message = action.payload.message;
-        },
-        loginFailed(state, action){
-            state.loading = false;
-            state.isAuthenticated = false;
-            state.user = {};
-            state.error = action.payload;
-            state.message = null;
-        },
-        fetchUserRequest(state, action){
-            state.loading = true;
-            state.isAuthenticated = false;
-            state.user = {};
+        clearUserErrors(state) {
             state.error = null;
         },
-        fetchUserSuccess(state, action){
-            state.loading = false;
-            state.isAuthenticated = true;
-            state.user = action.payload;
-            state.error = null;
-        },
-        fetchUserFailed(state, action){
-            state.loading = false;
-            state.isAuthenticated = false;
-            state.user = {};
-            state.error = action.payload;
-        },
-        logoutSuccess(state, action){
-            state.isAuthenticated = false;
-            state.user = {};
-            state.error=null;
-        },
-        logoutFailed(state, action){
-            state.isAuthenticated = state.isAuthenticated;
-            state.user = state.user;
-            state.error=action.payload;
-        },
-        clearAllErrors(state, action){
-            state.error = null;
-            state.user = state.user;
-        },
+        clearAdvice(state) {
+            state.careerAdvice = "";
+            state.adviceError = null;
+        }
+    },
+    extraReducers: (builder) => {
+        builder
+            // Career Advice
+            .addCase(fetchCareerAdvice.pending, (state) => { state.adviceLoading = true; })
+            .addCase(fetchCareerAdvice.fulfilled, (state, action) => {
+                state.adviceLoading = false;
+                state.careerAdvice = action.payload;
+            })
+            .addCase(fetchCareerAdvice.rejected, (state, action) => {
+                state.adviceLoading = false;
+                state.adviceError = action.payload;
+            })
+            // Other builders remain the same
+            .addCase(register.pending, (state) => { state.loading = true; })
+            .addCase(register.fulfilled, (state, action) => {
+                state.loading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload.user;
+                state.error = null;
+            })
+            .addCase(register.rejected, (state, action) => {
+                state.loading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                state.error = action.payload;
+            })
+            .addCase(login.pending, (state) => { state.loading = true; })
+            .addCase(login.fulfilled, (state, action) => {
+                state.loading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload.user;
+                state.error = null;
+            })
+            .addCase(login.rejected, (state, action) => {
+                state.loading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                state.error = action.payload;
+            })
+            .addCase(getUser.pending, (state) => { state.loading = true; })
+            .addCase(getUser.fulfilled, (state, action) => {
+                state.loading = false;
+                state.isAuthenticated = true;
+                state.user = action.payload;
+                state.error = null;
+            })
+            .addCase(getUser.rejected, (state, action) => {
+                state.loading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                // Don't set error for 401 (not authenticated) - this is expected
+                if (action.payload !== null) {
+                    state.error = action.payload;
+                }
+            })
+            .addCase(logout.fulfilled, (state) => {
+                state.loading = false;
+                state.isAuthenticated = false;
+                state.user = null;
+                state.error = null;
+            })
+            .addCase(logout.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            });
     },
 });
 
-export const register = (data) => async (dispatch) => {
-    dispatch(userSlice.actions.registerRequest());
-    try {
-        const response = await axios.post("http://localhost:4000/api/v1/user/register", data, {
-            withCredentials: true,
-            headers: {"Content-Type": "multipart/form-data"},
-        });
-        dispatch(userSlice.actions.registerSuccess(response.data));
-        dispatch(userSlice.actions.clearAllErrors());
-    } catch (error) {
-        dispatch(userSlice.actions.registerFailed(error.response.data.message));
-    }
-};
-
-export const login = (data) =>async (dispatch) => {
-    dispatch(userSlice.actions.loginRequest());
-    try {
-        const response = await axios.post("http://localhost:4000/api/v1/user/login", data, {
-            withCredentials: true,
-            headers: {"Content-Type": "application/json"},
-        });
-        dispatch(userSlice.actions.loginSuccess(response.data));
-        dispatch(userSlice.actions.clearAllErrors());
-    } catch (error) {
-        dispatch(userSlice.actions.loginFailed(error.response.data.message));
-    }
-}
-
-export const getUser = () =>async (dispatch) => {
-    dispatch(userSlice.actions.fetchUserRequest());
-    try {
-        const response = await axios.get("http://localhost:4000/api/v1/user/me", {
-            withCredentials: true,
-        });
-        dispatch(userSlice.actions.fetchUserSuccess(response.data.user));
-        dispatch(userSlice.actions.clearAllErrors());
-    } catch (error) {
-        dispatch(userSlice.actions.fetchUserFailed(error.response.data.message));
-    }
-}
-
-export const logout = () =>async (dispatch) => {
-    try {
-        const response = await axios.get("http://localhost:4000/api/v1/user/logout", {
-            withCredentials: true,
-        });
-        dispatch(userSlice.actions.logoutSuccess());
-        dispatch(userSlice.actions.clearAllErrors());
-    } catch (error) {
-        dispatch(userSlice.actions.logoutFailed(error.response.data.message));
-    }
-}
-
-export const clearAllUserErrors = () => (dispatch) => {
-    dispatch(userSlice.actions.clearAllErrors());
-};
-
+export const { clearUserErrors, clearAdvice } = userSlice.actions;
 export default userSlice.reducer;

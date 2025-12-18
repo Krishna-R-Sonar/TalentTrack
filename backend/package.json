@@ -6,11 +6,14 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "generate:word": "node scripts/generate-word.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.0",
     "cookie-parser": "^1.4.6",
@@ -18,10 +21,15 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "express-fileupload": "^1.5.1",
+    "express-rate-limit": "^8.0.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.6.2",
+    "newsapi": "^2.4.1",
+    "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.15",
-    "validator": "^13.12.0"
+    "validator": "^13.12.0",
+    "docx": "^8.5.0",
+    "isbinaryfile": "^5.0.2"
   }
 }

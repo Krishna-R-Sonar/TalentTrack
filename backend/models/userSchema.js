@@ -1,3 +1,4 @@
+// backend/models/userSchema.js
 import mongoose from "mongoose";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -6,22 +7,23 @@ import validator from 'validator';
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
+        required: [true, "Please provide your name."],
         minLength: [3, "Name must contain at least 3 characters."],
         maxLength: [30, "Name cannot exceed 30 characters."],
     },
     email: {
         type: String,
-        required: true,
-        validate: [validator.isEmail, "Please provide valid email."],
+        required: [true, "Please provide your email."],
+        unique: true,
+        validate: [validator.isEmail, "Please provide a valid email."],
     },
     phone: {
-        type: Number,
-        required: true,
+        type: String,
+        required: [true, "Please provide your phone number."],
     },
     address: {
         type: String,
-        required: true,
+        required: [true, "Please provide your address."],
     },
     niches: {
         firstNiche: String,
@@ -30,7 +32,7 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true,
+        required: [true, "Please provide a password."],
         minLength: [8, "Password must contain at least 8 characters."],
         maxLength: [32, "Password cannot exceed 32 characters."],
         select: false,
@@ -39,35 +41,99 @@ const userSchema = new mongoose.Schema({
         public_id: String,
         url: String,
     },
-    coverLetter: {
-        type: String,
-    },
+    coverLetter: String,
+    careerGoals: String,
     role: {
         type: String,
         required: true,
         enum: ["Job Seeker", "Employer"],
     },
+    autoApplyOptIn: {
+        type: Boolean,
+        default: true,
+    },
+    isVerified: { // For employer verification
+      type: Boolean,
+      default: false
+    },
+    // New fields for connections
+    connections: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    pendingConnections: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    sentConnectionRequests: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    // New fields for endorsements
+    endorsements: [{
+        skill: {
+            type: String,
+            required: true
+        },
+        endorser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        endorsedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    // New fields for groups
+    groups: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Group'
+    }],
+    // New fields for events
+    registeredEvents: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event'
+    }],
+    hostedEvents: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Event'
+    }],
     createdAt: {
         type: Date,
         default: Date.now,
     },
+    totalImpactPoints: {
+        type: Number,
+        default: 0,
+    },
+    impactPointsByCategory: {
+        type: Map,
+        of: Number,
+        default: {},
+    },
+    impactTier: {
+        type: String,
+        enum: ['Bronze', 'Silver', 'Gold'],
+        default: 'Bronze',
+    },
 });
 
-// password must be not visible to server
-// password must be hashed before storing in database
+// Hash password before saving
 userSchema.pre("save", async function(next) {
-    if(!this.isModified("password")) {
-        next();
+    if (!this.isModified("password")) {
+        return next();
     }
     this.password = await bcrypt.hash(this.password, 10);
-})
+});
 
-// compare encrypted pass with user pass
+// Compare password
 userSchema.methods.comparePassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.getJWTToken = function(){
+// Generate JWT
+userSchema.methods.getJWTToken = function() {
     return jwt.sign({
         id: this._id,
     }, process.env.JWT_SECRET_KEY, {

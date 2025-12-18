@@ -1,12 +1,14 @@
+// backend/utils/jwtToken.js
 export const sendToken = (user, statusCode, res, message) => {
     const token = user.getJWTToken();
     const options = {
         expires: new Date(
             Date.now() + process.env.COOKIE_EXPIRE * 24 * 60 * 60 * 1000
         ),
-        httpOnly: true, // This ensures the cookie can only be accessed by the server and not by client-side JavaScript. This is a security measure to protect against certain attacks like Cross-Site Scripting (XSS).
+        httpOnly: true, // Prevents client-side JS from accessing the cookie
+        secure: process.env.NODE_ENV === "production", // Only send cookie over HTTPS in production
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
     };
-
     res.status(statusCode).cookie("token", token, options).json({
         success: true,
         user,

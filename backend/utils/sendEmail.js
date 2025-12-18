@@ -1,22 +1,33 @@
+// backend/utils/sendEmail.js
 import nodeMailer from "nodemailer";
 
 export const sendEmail = async ({ email, subject, message }) => {
-    const transport = nodeMailer.createTransport({
+    const transporter = nodeMailer.createTransport({
         host: process.env.SMTP_HOST,
-        service: process.env.SMTP_SERVICE,
         port: process.env.SMTP_PORT,
+        secure: process.env.SMTP_PORT == 465,
+        service: process.env.SMTP_SERVICE,
         auth: {
             user: process.env.SMTP_MAIL,
             pass: process.env.SMTP_PASSWORD,
         },
     });
 
-    const options = {
-        from: process.env.SMTP_MAIL,
+    const mailOptions = {
+        from: `"TalentTrack" <${process.env.SMTP_MAIL}>`,
         to: email,
-        subject: subject,
+        subject,
         text: message,
     };
 
-    await transport.sendMail(options);
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Email sent successfully to ${email}`);
+        return { success: true };
+    } catch (error) {
+        console.error(`Failed to send email to ${email}:`, error);
+        // Don't throw - just log the error and return failure
+        // This prevents the application from crashing if email service is down
+        return { success: false, error: error.message };
+    }
 };
